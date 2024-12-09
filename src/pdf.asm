@@ -1,12 +1,17 @@
 ;https://blog.idrsolutions.com/make-your-own-pdf-file-part-1-pdf-objects-and-data-types/
 
 
-buffer = $c000
+buffer = $fb    ;and $fc
 
 write_pdf
     ; create header
     ldx #0
     ldy #0
+
+    stx buffer
+    lda #$c0
+    sta buffer+1
+    
 
 -   lda header,x
     beq +
@@ -19,18 +24,17 @@ write_pdf
 
 ;create root object, pointing to object 2
     ;1 0 obj <</Type /Catalog /Pages 2 0 R>>
+    ldx nrobjs
+    inc nrobjs
+    tya
+    sta object_positions,x
+    
     lda #$31
     jsr print_to_buffer
     jsr print_space
     lda #$30
     jsr print_to_buffer
     jsr print_space
-
-
-    ldx nrobjs
-    inc nrobjs
-    tya
-    sta object_positions,x
 
     ldx #0
 -   lda obj_start,x
@@ -107,17 +111,17 @@ write_pdf
 
 ; object 2
     ;2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>>
+    ldx nrobjs
+    inc nrobjs
+    tya
+    sta object_positions,x
+
     lda #$32
     jsr print_to_buffer
     jsr print_space
     lda #$30
     jsr print_to_buffer
     jsr print_space
-
-    ldx nrobjs
-    inc nrobjs
-    tya
-    sta object_positions,x
 
     ldx #0
 -   lda obj_start,x
@@ -193,9 +197,7 @@ write_pdf
     jsr print_to_buffer
     bne -
 
-+   jsr print_space
-
-    lda #31
++   lda #$31
     jsr print_to_buffer
 
     ;>>
@@ -220,17 +222,17 @@ write_pdf
 
 ; object 3
     ;3 0 obj <</MediaBox [0 0 500 800]>>
+    ldx nrobjs
+    inc nrobjs
+    tya
+    sta object_positions,x
+
     lda #$33
     jsr print_to_buffer
     jsr print_space
     lda #$30
     jsr print_to_buffer
     jsr print_space
-
-    ldx nrobjs
-    inc nrobjs
-    tya
-    sta object_positions,x
 
     ldx #0
 -   lda obj_start,x
@@ -243,6 +245,13 @@ write_pdf
 
     ;<<
     ldx #0
+-   lda dict_start,x
+    beq +
+    inx
+    jsr print_to_buffer
+    bne -
+
++   ldx #0
 -   lda key_mediabox,x
     beq +
     inx
@@ -335,18 +344,17 @@ write_pdf
     ; 0000000000 65535 f
     ldx #0
 -   lda obj_0,x
-    beq +
+    beq .xref_entries
     inx
     jsr print_to_buffer
     bne -
 
+.xref_entries
 ;   print xref entries (starting with second one)
-+   sty write_pos
 -   jsr print_xref
-    inc curobj
-    cmp nrobjs
+    lda nrobjs
+    cmp curobj
     bpl -
-    ldy write_pos
     
 ;----------------
 ; trailer
@@ -465,6 +473,10 @@ write_pdf
 
 +   rts
 
+;--------------------------------
+; end
+;--------------------------------
+
 print_xref
     ; 0000000010 00000 n
 +   ldx #0
@@ -479,6 +491,8 @@ print_xref
     pha
     ldx curobj
     lda object_positions,x
+    inx
+    stx curobj
     jsr a_to_dec
     ; restore y
     pla
@@ -532,53 +546,55 @@ a_to_dec
     rts
 
 print_lf
-    lda lf
+    lda char_lf
     jmp print_to_buffer
 
 print_space
     lda #$20
 
 print_to_buffer
-    sta buffer,y
+    sta (buffer),y
     iny
-    rts
+    bne +
+    inc buffer+1
++   rts
 
-lf              !byte $0a
-xrefpos         !byte 0
-nrobjs          !byte 1
-curobj          !byte 1
+char_lf             !byte $0a
+xrefpos             !byte 0
+nrobjs              !byte 1
+curobj              !byte 1
 
-header          !text "%PDF-1.3",0
-eof             !text "%%EOF",0
-trailer         !text "trailer ",0
-xref            !text "xref",0
-startxref       !text "startxref",0
+header              !text "%PDF-1.3",0
+eof                 !text "%%EOF",0
+trailer             !text "trailer ",0
+xref                !text "xref",0
+startxref           !text "startxref",0
 
-dict_start      !text "<<",0
-dict_end        !text ">>",0
-obj_start       !text "obj",0
-obj_end         !text "endobj",0
-array_start     !text "[ ",0
-array_end       !text " ]",0
-stream_start    !text "stream",0
-stream_end      !text "endstream",0
+dict_start          !text "<<",0
+dict_end            !text ">>",0
+obj_start           !text "obj",0
+obj_end             !text "endobj",0
+array_start         !text "[ ",0
+array_end           !text " ]",0
+stream_start        !text "stream",0
+stream_end          !text "endstream",0
 
-key_basefont    !text "/BaseFont ",0
-key_catalog     !text "/Catalog ",0
-key_contents    !text "/Contents ",0
-key_count       !text "/Count ",0
-key_font        !text "/Font ",0
-key_kids        !text "/Kids ",0
-key_length      !text "/Length ",0
-key_mediabox    !text "/MediaBox ",0
-key_pages       !text "/Pages ",0
-key_parent      !text "/Parent ",0
-key_resources   !text "/Resources ",0
-key_root        !text "/Root ",0
-key_size        !text "/Size ",0
-key_subtype     !text "/Subtype ",0
-key_type        !text "/Type ",0
-key_type1       !text "/Type1",0
+key_basefont        !text "/BaseFont ",0
+key_catalog         !text "/Catalog ",0
+key_contents        !text "/Contents ",0
+key_count           !text "/Count ",0
+key_font            !text "/Font ",0
+key_kids            !text "/Kids ",0
+key_length          !text "/Length ",0
+key_mediabox        !text "/MediaBox ",0
+key_pages           !text "/Pages ",0
+key_parent          !text "/Parent ",0
+key_resources       !text "/Resources ",0
+key_root            !text "/Root ",0
+key_size            !text "/Size ",0
+key_subtype         !text "/Subtype ",0
+key_type            !text "/Type ",0
+key_type1           !text "/Type1",0
 
 font_timesroman     !text "/Times-Roman",0
 
@@ -588,5 +604,9 @@ zero_7              !text "0000000",0
 
 digit_buffer        !byte 0,0,0
 
+
+write_pos           !word 0     ; used for writing offset positions, mainly. write index itself is buffer + y
+y_store             !byte 0     ; used to store y-reg
+
+; object_positions must be the last byte, because it expands according to the number of objects
 object_positions    !byte 0
-write_pos           !byte 0
