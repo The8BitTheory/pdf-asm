@@ -24,37 +24,11 @@ write_pdf
 
 ;create root object, pointing to object 2
     ;1 0 obj <</Type /Catalog /Pages 2 0 R>>
-    ldx nrobjs
-    inc nrobjs
-    tya
-    sta object_positions,x
-    
-    lda #$31
-    jsr print_to_buffer
-    jsr print_space
-    lda #$30
-    jsr print_to_buffer
-    jsr print_space
-
-    ldx #0
--   lda obj_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_space
-
-    ;<<
-    ldx #0
--   lda dict_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    lda #1
+    jsr print_obj_start
 
     ;/type
-+   ldx #0
+    ldx #0
 -   lda key_type,x
     beq +
     inx
@@ -82,12 +56,7 @@ write_pdf
     jsr print_to_buffer
     jsr print_space
 
-    lda #$30
-    jsr print_to_buffer
-    jsr print_space
-
-    lda #$52    ;R
-    jsr print_to_buffer
+    jsr print_zero_R
 
     ;>>
     ldx #0
@@ -111,37 +80,11 @@ write_pdf
 
 ; object 2
     ;2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>>
-    ldx nrobjs
-    inc nrobjs
-    tya
-    sta object_positions,x
-
-    lda #$32
-    jsr print_to_buffer
-    jsr print_space
-    lda #$30
-    jsr print_to_buffer
-    jsr print_space
-
-    ldx #0
--   lda obj_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_space
-
-    ;<<
-    ldx #0
--   lda dict_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    lda #2
+    jsr print_obj_start
 
     ;/type
-+   ldx #0
+    ldx #0
 -   lda key_type,x
     beq +
     inx
@@ -176,12 +119,7 @@ write_pdf
     jsr print_to_buffer
     jsr print_space
 
-    lda #$30
-    jsr print_to_buffer
-    jsr print_space
-
-    lda #$52    ;R
-    jsr print_to_buffer
+    jsr print_zero_R
 
     ldx #0
 -   lda array_end,x
@@ -222,36 +160,10 @@ write_pdf
 
 ; object 3
     ;3 0 obj <</MediaBox [0 0 500 800]>>
-    ldx nrobjs
-    inc nrobjs
-    tya
-    sta object_positions,x
-
-    lda #$33
-    jsr print_to_buffer
-    jsr print_space
-    lda #$30
-    jsr print_to_buffer
-    jsr print_space
+    lda #3
+    jsr print_obj_start
 
     ldx #0
--   lda obj_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_space
-
-    ;<<
-    ldx #0
--   lda dict_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   ldx #0
 -   lda key_mediabox,x
     beq +
     inx
@@ -354,7 +266,7 @@ write_pdf
 -   jsr print_xref
     lda nrobjs
     cmp curobj
-    bpl -
+    bne -
     
 ;----------------
 ; trailer
@@ -391,18 +303,7 @@ write_pdf
     pla
     tay
 
-    lda digit_buffer+2
-    cmp #$30
-    beq +
-    jsr print_to_buffer
-
-+   lda digit_buffer+1
-    cmp #$30
-    beq +
-    jsr print_to_buffer
-
-+   lda digit_buffer
-    jsr print_to_buffer
+    jsr print_digits
 
     ;/Root 1 0 R
     ldx #0
@@ -418,12 +319,7 @@ write_pdf
     jsr print_space
 
     ;0
-    lda #$30
-    jsr print_to_buffer
-    jsr print_space
-
-    lda #$52    ;R
-    jsr print_to_buffer
+    jsr print_zero_R
 
     ;>>
     ldx #0
@@ -451,16 +347,7 @@ write_pdf
     pla
     tay
 
-    lda digit_buffer+2
-    cmp #$30
-    beq +
-    jsr print_to_buffer
-
-+   lda digit_buffer+1
-    jsr print_to_buffer
-
-+   lda digit_buffer
-    jsr print_to_buffer
+    jsr print_digits
 
     jsr print_lf
 
@@ -558,6 +445,66 @@ print_to_buffer
     bne +
     inc buffer+1
 +   rts
+
+print_obj_start
+    pha ;save A for in a bit
+    ldx nrobjs
+    inc nrobjs
+    tya
+    sta object_positions,x
+    pla ;restore A
+
+    clc
+    adc #$30
+    jsr print_to_buffer
+    jsr print_space
+    lda #$30
+    jsr print_to_buffer
+    jsr print_space
+
+    ldx #0
+-   lda obj_start,x
+    beq +
+    inx
+    jsr print_to_buffer
+    bne -
+
++   jsr print_space
+
+    ;<<
+    ldx #0
+-   lda dict_start,x
+    beq +
+    inx
+    jsr print_to_buffer
+    bne -
+
++   rts
+
+print_digits
+    lda digit_buffer+2
+    cmp #$30
+    beq +
+    jsr print_to_buffer
+
++   lda digit_buffer+1
+    cmp #$30
+    beq +
+    jsr print_to_buffer
+
++   lda digit_buffer
+    jsr print_to_buffer
+
+    rts
+
+print_zero_R
+    lda #$30
+    jsr print_to_buffer
+    jsr print_space
+
+    lda #$52    ;R
+    jsr print_to_buffer
+    rts
 
 char_lf             !byte $0a
 xrefpos             !byte 0
