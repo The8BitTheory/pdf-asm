@@ -1,7 +1,7 @@
 ;https://blog.idrsolutions.com/make-your-own-pdf-file-part-1-pdf-objects-and-data-types/
 
 
-buffer = $fb    ;and $fc
+buffer = $fb    ;and $fc. that's where we assemble the source-text for the pdf
 
 write_pdf
     ; create header
