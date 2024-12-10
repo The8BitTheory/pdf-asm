@@ -5,18 +5,28 @@
 ; - RLE-Encode the VIC-II Hires data
 ; - write the PDF-File to disk
 
+; code resides in $9000
+; pdf-source resides in $c000
+; $33c (tape buffer) is used for rle-encoding experiments right now
 
 *= $9000    ;this is just for testing purposes. real tesa printer drivers start at $9000
 
-!source "src/pdf.asm"
-
-    lda #0
-    sta $AE
-    lda #90
-    sta $AF
-
-!source "src/rle.asm"
 
 
+;    lda #0
+;    sta $AE
+;    lda #90
+;    sta $AF
 
-rts 
+    jsr write_pdf
+    jsr rle_encode
+    rts
+
+;!source "src/pdf.asm"
+;!source "src/rle.asm"
+
+!source "pdf.asm"
+!source "rle.asm"
+
+
+ 
