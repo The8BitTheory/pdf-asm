@@ -77,7 +77,7 @@ write_pdf
     jsr print_array_end
     jsr print_key_count
 
-+   lda #$31
+    lda #$31
     jsr print_to_buffer
 
     ;>>
@@ -98,7 +98,7 @@ write_pdf
     jsr print_array_start
  
     ;0 0 500 800
-+   lda #$30
+    lda #$30
     jsr print_to_buffer
     jsr print_space
 
@@ -234,7 +234,7 @@ write_pdf
 
 print_xref_block
     ; 0000000010 00000 n
-+   ldx #0
+    ldx #0
 -   lda zero_7,x
     beq +
     inx
@@ -515,10 +515,6 @@ zero_5              !text "00000",0
 zero_7              !text "0000000",0
 
 digit_buffer        !byte 0,0,0
-
-
-write_pos           !word 0     ; used for writing offset positions, mainly. write index itself is buffer + y
-y_store             !byte 0     ; used to store y-reg
 
 ; object_positions must be the last byte, because it expands according to the number of objects
 object_positions    !byte 0
