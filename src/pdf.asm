@@ -1,182 +1,101 @@
 ;https://blog.idrsolutions.com/make-your-own-pdf-file-part-1-pdf-objects-and-data-types/
 
 
-buffer = $fb    ;and $fc. that's where we assemble the source-text for the pdf
+buffer      = $fb   ;and $fc. that's where we assemble the source-text for the pdf
+pointer     = $fd   ;and $fe
+y_buffer    = $fa   ; usually contains HB pointer for rs232-output buffer
+y_pointer   = $f9   ; usually contains LB pointer for rs232-output buffer
 
 write_pdf
     ; create header
     ldx #0
     ldy #0
 
+    sty y_buffer
     stx buffer
     lda #$c0
     sta buffer+1
     
+    lda #<header
+    sta pointer
+    lda #>header
+    sta pointer+1
+    jsr pointer_to_buffer
 
--   lda header,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_lf
+    jsr print_lf
     jsr print_lf
 
 ;create root object, pointing to object 2
     ;1 0 obj <</Type /Catalog /Pages 2 0 R>>
     lda #1
-    jsr print_obj_start
+    jsr print_obj_start_block
 
     ;/type
-    ldx #0
--   lda key_type,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_key_type
  
     ;/catalog
-+   ldx #0
--   lda key_catalog,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_key_catalog
 
     ; /pages
-+   ldx #0
--   lda key_pages,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_key_pages
 
     ; 2 0 R
-+   lda #$32
+    lda #$32
     jsr print_to_buffer
     jsr print_space
-
     jsr print_zero_R
 
     ;>>
-    ldx #0
--   lda dict_end,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_lf
+    jsr print_dict_end
+    jsr print_lf
 
     ;endobj
-    ldx #0
--   lda obj_end,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_lf
+    jsr print_obj_end
+    jsr print_lf
 
 ; object 2
     ;2 0 obj <</Type /Pages /Kids [3 0 R] /Count 1>>
     lda #2
-    jsr print_obj_start
+    jsr print_obj_start_block
 
     ;/type
-    ldx #0
--   lda key_type,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_key_type
  
     ;/pages
-+   ldx #0
--   lda key_pages,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_key_pages
 
-    ; /kids
-+   ldx #0
--   lda key_kids,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    ;/kids
+    jsr print_key_kids
 
-+   ldx #0
--   lda array_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_array_start
 
     ; 3 0 R
-+   lda #$33
+    lda #$33
     jsr print_to_buffer
     jsr print_space
-
     jsr print_zero_R
-
-    ldx #0
--   lda array_end,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   ldx #0
--   lda key_count,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_array_end
+    jsr print_key_count
 
 +   lda #$31
     jsr print_to_buffer
 
     ;>>
-    ldx #0
--   lda dict_end,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_lf
+    jsr print_dict_end
+    jsr print_lf
 
     ;endobj
-    ldx #0
--   lda obj_end,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_lf
+    jsr print_obj_end
+    jsr print_lf
 
 ; object 3
     ;3 0 obj <</MediaBox [0 0 500 800]>>
     lda #3
-    jsr print_obj_start
-
-    ldx #0
--   lda key_mediabox,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_obj_start_block
+    jsr print_key_mediabox
 
     ;[
-+   ldx #0
--   lda array_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_array_start
  
     ;0 0 500 800
 +   lda #$30
@@ -203,45 +122,28 @@ write_pdf
     jsr print_to_buffer
 
     ;]
-    ldx #0
--   lda array_end,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_array_end
 
     ;>>
-+   ldx #0
--   lda dict_end,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_lf
+    jsr print_dict_end
+    jsr print_lf
 
     ;endobj
-    ldx #0
--   lda obj_end,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_lf
+    jsr print_obj_end
+    jsr print_lf
 ;-----------------------
 ;          xref
 ; Cross Reference Table
 ;-----------------------
     sty xrefpos
 
-    ldx #0
--   lda xref,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-+   jsr print_lf
+    lda #<xref
+    sta pointer
+    lda #>xref
+    sta pointer+1
+    jsr pointer_to_buffer
+
+    jsr print_lf
 
     ; 0 2
     lda #$30
@@ -263,7 +165,7 @@ write_pdf
 
 .xref_entries
 ;   print xref entries (starting with second one)
--   jsr print_xref
+-   jsr print_xref_block
     lda nrobjs
     cmp curobj
     bne -
@@ -272,49 +174,28 @@ write_pdf
 ; trailer
 ;----------------
 ;trailer <</Size 2/Root 1 0 R>>
-    ldx #0
--   lda trailer,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    lda #<trailer
+    sta pointer
+    lda #>trailer
+    sta pointer+1
+    jsr pointer_to_buffer
 
     ;<<
-+   ldx #0
--   lda dict_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_dict_start
 
     ;/Size 2
-+   ldx #0
--   lda key_size,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_key_size
 
     ;nr objects for /Size 
-+   tya
-    pha
     lda nrobjs
     jsr a_to_dec
-    pla
-    tay
-
     jsr print_digits
 
     ;/Root 1 0 R
-    ldx #0
--   lda key_root,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_key_root
 
     ;1
-+   lda #$31
+    lda #$31
     jsr print_to_buffer
     jsr print_space
 
@@ -322,49 +203,36 @@ write_pdf
     jsr print_zero_R
 
     ;>>
-    ldx #0
--   lda dict_end,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_dict_end
+    jsr print_lf
 
-+   jsr print_lf
-
-    ldx #0
--   lda startxref,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_lf
-
-    tya
-    pha
-    lda xrefpos
-    jsr a_to_dec
-    pla
-    tay
-
-    jsr print_digits
+    lda #<startxref
+    sta pointer
+    lda #>startxref
+    sta pointer+1
+    jsr pointer_to_buffer
 
     jsr print_lf
 
-    ldx #0
--   lda eof,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    lda xrefpos
+    jsr a_to_dec
 
-+   rts
+    jsr print_digits
+    jsr print_lf
+    
+    lda #<eof
+    sta pointer
+    lda #>eof
+    sta pointer+1
+    jsr pointer_to_buffer
+
+    rts
 
 ;--------------------------------
 ; end
 ;--------------------------------
 
-print_xref
+print_xref_block
     ; 0000000010 00000 n
 +   ldx #0
 -   lda zero_7,x
@@ -374,16 +242,11 @@ print_xref
     bne -
 
     ; store y (will be used for hundrets)
-+   tya
-    pha
-    ldx curobj
++   ldx curobj
     lda object_positions,x
     inx
     stx curobj
     jsr a_to_dec
-    ; restore y
-    pla
-    tay
     
     ; print hundrets
     lda digit_buffer+2
@@ -414,6 +277,117 @@ print_xref
 
     rts
 
+
+pointer_to_buffer
+    ldy #0
+    sty y_pointer
+-   ldy y_pointer
+    lda (pointer),y
+    beq +
+    iny
+    sty y_pointer
+    jsr print_to_buffer
+    bne -
++   rts
+
+print_key_catalog
+    lda #<key_catalog
+    sta pointer
+    lda #>key_catalog
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_key_count
+    lda #<key_count
+    sta pointer
+    lda #>key_count
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_key_kids
+    lda #<key_kids
+    sta pointer
+    lda #>key_kids
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_key_mediabox
+    lda #<key_mediabox
+    sta pointer
+    lda #>key_mediabox
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_key_root
+    lda #<key_root
+    sta pointer
+    lda #>key_root
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_key_size
+    lda #<key_size
+    sta pointer
+    lda #>key_size
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_key_type
+    lda #<key_type
+    sta pointer
+    lda #>key_type
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_key_pages
+    lda #<key_pages
+    sta pointer
+    lda #>key_pages
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_array_start
+    lda #<array_start
+    sta pointer
+    lda #>array_start
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_array_end
+    lda #<array_end
+    sta pointer
+    lda #>array_end
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_dict_start
+    lda #<dict_start
+    sta pointer
+    lda #>dict_start
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_dict_end
+    lda #<dict_end
+    sta pointer
+    lda #>dict_end
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_obj_start
+    lda #<obj_start
+    sta pointer
+    lda #>obj_start
+    sta pointer+1
+    jmp pointer_to_buffer
+
+print_obj_end
+    lda #<obj_end
+    sta pointer
+    lda #>obj_end
+    sta pointer+1
+    jmp pointer_to_buffer
+
 a_to_dec
     ldy #$2f
     ldx #$3a
@@ -440,13 +414,15 @@ print_space
     lda #$20
 
 print_to_buffer
+    ldy y_buffer
     sta (buffer),y
     iny
+    sty y_buffer
     bne +
     inc buffer+1
 +   rts
 
-print_obj_start
+print_obj_start_block
     pha ;save A for in a bit
     ldx nrobjs
     inc nrobjs
@@ -462,24 +438,13 @@ print_obj_start
     jsr print_to_buffer
     jsr print_space
 
-    ldx #0
--   lda obj_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
-
-+   jsr print_space
+    jsr print_obj_start
+    jsr print_space
 
     ;<<
-    ldx #0
--   lda dict_start,x
-    beq +
-    inx
-    jsr print_to_buffer
-    bne -
+    jsr print_dict_start
 
-+   rts
+    rts
 
 print_digits
     lda digit_buffer+2
