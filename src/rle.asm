@@ -59,7 +59,7 @@ rle_encode
     dey
     bpl -
 
-+   lda #18
++   lda #10
     sta data_length
     lda #0
     sta data_length+1
@@ -160,7 +160,8 @@ rle_encode
     rts
 
 .write_literal_series
-    ;write series length
+    ;write series length (run_length is reduced by 1)
+    dec run_length
     lda run_length
     ldy y_target
     sta (target_address),y
@@ -176,7 +177,7 @@ rle_encode
     sta (target_address),y
     jsr .increase_write_offset
     dec run_length
-    bne -
+    bpl -
 
     ; decrease read offset, because we need to go back one step
     dec y_source
@@ -203,7 +204,7 @@ rle_encode
     bne +
     inc source_address+1
 
-+   dec data_length
++   dec data_length    
     bne ++               ;LB not zero, we're not at EOF
     lda data_length+1
     bmi +                   ;HB is zero (and LB is, too), we're at EOF
