@@ -20,6 +20,7 @@ y_run           = $2        ; originally contains LB of RS232-input buffer
 
 
 data_length     = $334      ; -$335. value 8000 (=$1f40). 40x25 cells, 1x8 bytes each
+done            = $336
 
 comp_value      = $3fc      ; used to compare if repeating byte or single byte
 run_length      = $3fd      ; how long is the current series?
@@ -50,8 +51,9 @@ rle_encode
     sty y_source
     sty y_target
     sty y_run
+    sty done
     lda (target_address),y
-    beq +
+    beq .start
 
     ldy #32
     lda #0
@@ -59,10 +61,10 @@ rle_encode
     dey
     bpl -
 
-+   lda #10
-    sta data_length
-    lda #0
-    sta data_length+1
+;+   lda #10
+;    sta data_length
+;    lda #0
+;    sta data_length+1
 ;    lda #$40
 ;    sta data_length
 ;    lda #$1f
@@ -89,8 +91,7 @@ rle_encode
     sta comp_value                  ; store current value
     
     lda (source_address),y          ; read next value
-    jsr .increase_read_offset
-    bcs .end
+    jsr .increase_read_offset       ; END hit here
 
     ;compare values
     cmp comp_value
@@ -106,7 +107,6 @@ rle_encode
     cmp comp_value
     bne .write_repeated_bytes
     jsr .increase_read_offset       ; only increase read offset when run goes on.
-    bcs .end
     jmp -
 
 .write_repeated_bytes
@@ -122,7 +122,13 @@ rle_encode
     sta (target_address),y
     jsr .increase_write_offset
 
-    jmp .start
+    ;inc data_length
+    ;bne +
+    ;inc data_length+1
+
+    lda done
+    beq .start
+    jmp .end
 
 
 .literal_series
@@ -140,7 +146,6 @@ rle_encode
     beq .write_literal_series       ; we found matching values. end the literal series
     
     jsr .increase_read_offset
-    bcs .end
     jmp -
 
 
@@ -184,7 +189,13 @@ rle_encode
     bpl +
     dec source_address+1
 
-+   jmp .start
++   inc data_length
+    bne +
+    inc data_length+1
+
++   lda done
+    bne .end
+    jmp .start
 
 .increase_write_offset
     iny
@@ -204,14 +215,17 @@ rle_encode
     bne +
     inc source_address+1
 
-+   dec data_length    
-    bne ++               ;LB not zero, we're not at EOF
-    lda data_length+1
-    bmi +                   ;HB is zero (and LB is, too), we're at EOF
++   dec data_length
+    ldx data_length
+    bne ++
+    ldx data_length+1
+    bpl +
     dec data_length+1
     jmp ++
+    
++   ldx #1
+    stx done
 
-+   sec
 ++  rts
 
 
