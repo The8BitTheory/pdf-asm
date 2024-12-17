@@ -218,10 +218,8 @@ rle_encode
 +   dec data_length
     ldx data_length
     bne ++
-    ldx data_length+1
-    bpl +
     dec data_length+1
-    jmp ++
+    bpl ++
     
 +   ldx #1
     stx done
