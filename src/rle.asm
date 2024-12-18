@@ -101,7 +101,7 @@ rle_encode
 ;.repeated_bytes
 -   sta comp_value
     inc run_length
-    bmi .write_repeated_bytes       ; check if we reached the limit of 127 values. if so, write run to output
+    bmi .write_repeated_bytes_intr  ; check if we reached the limit of 127 values. if so, write run to output
 
     lda (source_address),y          ; read next value
     cmp comp_value
@@ -109,8 +109,15 @@ rle_encode
     jsr .increase_read_offset       ; only increase read offset when run goes on.
     jmp -
 
+; we write the series because the 127 bytes limit is reached
+.write_repeated_bytes_intr
+    dec run_length
+    jsr .decrease_read_offset
+    jmp +
+
 .write_repeated_bytes
-    ldy y_target
+    inc run_length
++   ldy y_target
 
     sec
     lda #0
@@ -135,7 +142,7 @@ rle_encode
     sta comp_value
 
 -   inc run_length
-    bmi .write_literal_series       ;127 values reached. commit the literal series and jump to start
+    bmi .write_literal_series_intr  ;127 values reached. commit the literal series and jump to start
 
     ;y is set to y_source, coming from the .start routine
     lda (source_address),y          ; read next value
@@ -164,6 +171,10 @@ rle_encode
     clc
     rts
 
+.write_literal_series_intr
+;    dec run_length
+    jsr .decrease_read_offset
+
 .write_literal_series
     ;write series length (run_length is reduced by 1)
     dec run_length
@@ -184,16 +195,9 @@ rle_encode
     dec run_length
     bpl -
 
-    ; decrease read offset, because we need to go back one step
-    dec y_source
-    bpl +
-    dec source_address+1
+    jsr .decrease_read_offset
 
-+   inc data_length
-    bne +
-    inc data_length+1
-
-+   lda done
+    lda done
     bne .end
     jmp .start
 
@@ -202,6 +206,20 @@ rle_encode
     sty y_target
     bne +
     inc target_address+1
+
++   rts
+
+.decrease_read_offset
+    ; decrease read offset, because we need to go back one step
+    sec
+    lda y_source
+    sbc #1
+    bcs +
+    dec source_address+1
+
++   inc data_length
+    bne +
+    inc data_length+1
 
 +   rts
 
